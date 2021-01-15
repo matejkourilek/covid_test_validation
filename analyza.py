@@ -1,27 +1,52 @@
+# import libs
 import os
 import pandas as pd
 import numpy as np
+import matplotlib
 
-# Import the necessaries libraries
-import plotly.offline as pyo
-import plotly.graph_objs as go
-# Set notebook mode to work in offline
-pyo.init_notebook_mode()
-
+# load data
 data = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Data')
-results = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Výsledky').dropna()
-data['id'] = data['TestBatchCode'] + '_' + data['SamplingItemCode'] + '_' + data['TestResultPosition']
+results = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Výsledky')
+data['id'] = data['TestBatchCode'] + '_' + data['SamplingItemCode'] #+ '_' + data['TestResultPosition']
 results['id'] = results['testbatchcode'] + '_' + results['samplingitemcode']
+results.set_index(['id'], drop=True, inplace=True)
+data.set_index(['id'], drop=True, inplace=True)
 
-data.head()
-results.head()
+# clean results with NaNs and inconclusive test
+results.result_value.unique()
+res = results[results['result_value'].notna()]
+res = res[~(res['result_value'] == 'INVALID')]
+res = res.loc[~res.duplicated()]
+res.shape
+res.samplestate.unique()
+res.drop(['samplestate', 'sampleposition'], axis=1, inplace=True)
+df = data.drop(['Rn'], axis=1)
+df = df.loc[(df['SamplingItemCode'] != 'unknown') & (df['SamplingItemCode'] != 'unknown2')]
 
-df = data.set_index(['id', 'Gen', 'Cycle'], drop=True)
-df = df.drop(columns=['TestBatchCode', 'TestResultPosition', 'SamplingItemCode', 'Rn'])
+df.head()
+res.head()
+df.shape
 
-df = df.unstack(level='Gen')
+# get rid of duplicities
+df_f = res.merge(df, how='inner', left_index=True, right_index=True)
+df_f.shape
+
+#df_f.dropna(subset=['TestResultPosition', 'SamplingItemCode'], axis=0, inplace=True)
+df_f['id'] = df_f['TestBatchCode'] + '_' + df_f['SamplingItemCode']# + '_' + df_f['TestResultPosition']
+df_f.drop(['samplingitemcode', 'testbatchcode', 'TestBatchCode', 'SamplingItemCode', 'TestResultPosition'], axis=1, inplace=True)
+df_f.columns
+df_f = df_f.reset_index(drop=True).set_index(['id', 'Gen', 'Cycle'], drop=True)
+#df_f = df_f.drop(columns=['TestBatchCode', 'TestResultPosition', 'SamplingItemCode', 'Rn'])
+
+df_f = df_f[~df_f.index.duplicated(keep='first')]
+df = df_f.unstack(level='Gen')
 df = df.droplevel(level=0, axis=1)
 df = df.fillna(method='ffill')
 
-id = df.index.get_level_values(0).unique()[300]
-df.loc[id, :].plot()
+# sample 200 is negative while graph shows nice positivity. Same for sample number 500.
+# MIGHT HAVE ERROR IN MERGING
+id = df.index.get_level_values(0).unique()[0]
+df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
+df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
+test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
+df.loc[id, :].plot(title=f'{test_result} od id: {id}')

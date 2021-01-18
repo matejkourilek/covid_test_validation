@@ -1,8 +1,11 @@
 # import libs
 import os
 import pandas as pd
+
 import numpy as np
 import matplotlib
+
+
 
 # load data
 data = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Data')
@@ -38,10 +41,13 @@ df = df_f.unstack(level='Gen')
 df = df['DeltaRn']
 df = df.fillna(method='ffill')
 
-# sample 200 is negative while graph shows nice positivity. Same for sample number 500.
-# MIGHT HAVE ERROR IN MERGING
+
 id = df.index.get_level_values(0).unique()[0]
 df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
 df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
 test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
 df.loc[id, :].plot(title=f'{test_result} od id: {id}')
+df.loc[id,:].index.get_level_values(0)
+
+df.loc[id]
+

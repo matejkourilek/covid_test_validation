@@ -42,7 +42,7 @@ df = df['DeltaRn']
 df = df.fillna(method='ffill')
 
 
-id = df.index.get_level_values(0).unique()[0]
+id = df.index.get_level_values(0).unique()[200]
 df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
 df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
 test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
@@ -51,3 +51,18 @@ df.loc[id,:].index.get_level_values(0)
 
 df.loc[id]
 
+
+import functions as covid_eval
+importlib.reload(covid_eval)
+test = covid_eval.CovidAnalytics(id, df.loc[id,'N gene'])
+test.analyze_test()
+test.results
+
+import matplotlib.pyplot as plt
+plt.plot(test.xdata, test.pred, label='Fitted')
+plt.plot(test.xdata, test.ydata, label='Actual')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
+
+plt.show()

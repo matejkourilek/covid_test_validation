@@ -4,7 +4,6 @@ import pandas as pd
 from sklearn.metrics import r2_score
 import numpy as np
 
-
 class CovidAnalytics:
 
     def __init__(self, name, data, gens):
@@ -14,6 +13,7 @@ class CovidAnalytics:
         self.gens = [gen for gen in gens]
         self.results = pd.DataFrame(columns=['id','Slope','x_intersec','r2','L','x0','k','b','Warning', 'gen'])
         self.pred = pd.DataFrame(index=self.xdata, columns=self.gens)
+        self.warning = False
 
     def sigmoid(self, x, L, x0, k, b):
         y = L / (1 + np.exp(-k * (x - x0))) + b
@@ -43,14 +43,24 @@ class CovidAnalytics:
 
     def analyze_test(self):
         for gen in self.gens:
-            f_param, cov = self.fit_sigmoid(gen)
-            r2 = self.r2(gen)
-            slope = self.sigmoid_tangent_slope(f_param[1], *f_param[0:3])
-            x_intersec = self.x_axis_intersection(slope, f_param[1], *f_param)
-            self.results = self.results.append({'id': self.name,'Slope': slope,
-                                                'x_intersec': x_intersec,
-                                                'r2': r2, 'L': f_param[0],
-                                                'x0': f_param[1], 'k': f_param[2],
-                                                'b': f_param[3], 'Warning': 0,
-                                                'gen': gen},
-                                                ignore_index=True)
+            try:
+                f_param, cov = self.fit_sigmoid(gen)
+                r2 = self.r2(gen)
+                slope = self.sigmoid_tangent_slope(f_param[1], *f_param[0:3])
+                x_intersec = self.x_axis_intersection(slope, f_param[1], *f_param)
+                self.results = self.results.append({'id': self.name,'Slope': slope,
+                                                    'x_intersec': x_intersec,
+                                                    'r2': r2, 'L': f_param[0],
+                                                    'x0': f_param[1], 'k': f_param[2],
+                                                    'b': f_param[3], 'Warning': self.warning,
+                                                    'gen': gen},
+                                                    ignore_index=True)
+            except (RuntimeError, ValueError):
+                warning = True
+                self.results = self.results.append({'id': self.name, 'Slope': np.nan,
+                                                    'x_intersec': np.nan,
+                                                    'r2': np.nan, 'L': np.nan,
+                                                    'x0': np.nan, 'k': np.nan,
+                                                    'b': np.nan, 'Warning': warning,
+                                                    'gen': gen},
+                                                   ignore_index=True)

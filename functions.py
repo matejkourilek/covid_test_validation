@@ -11,7 +11,7 @@ class CovidAnalytics:
         self.name = name
         self.xdata = np.array(range(1, 51))
         self.ydata = data
-        self.results = pd.DataFrame(columns=['id','Slope','x_intersec','r2','L','x0','k','b'])
+        self.results = pd.DataFrame(columns=['id','Slope','x_intersec','r2','L','x0','k','b','Warning'])
 
     def sigmoid(self, x, L, x0, k, b):
         y = L / (1 + np.exp(-k * (x - x0))) + b
@@ -46,4 +46,5 @@ class CovidAnalytics:
                                             'x_intersec': self.x_intersec,
                                             'r2': self.r2_score, 'L': self.popt[0],
                                             'x0': self.popt[1], 'k': self.popt[2],
-                                            'b': self.popt[3]}, ignore_index=True)
+                                            'b': self.popt[3], 'Warning': 0},
+                                            ignore_index=True)

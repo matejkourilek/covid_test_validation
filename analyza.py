@@ -1,9 +1,11 @@
 # import libs
 import os
-import pandas as pd
+import matplotlib
+import importlib
 
 import numpy as np
-import matplotlib
+import pandas as pd
+
 
 
 
@@ -42,7 +44,7 @@ df = df['DeltaRn']
 df = df.fillna(method='ffill')
 
 
-id = df.index.get_level_values(0).unique()[200]
+id = df.index.get_level_values(0).unique()[0]
 df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
 df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
 test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
@@ -54,9 +56,24 @@ df.loc[id]
 
 import functions as covid_eval
 importlib.reload(covid_eval)
-test = covid_eval.CovidAnalytics(id, df.loc[id,'N gene'])
-test.analyze_test()
-test.results
+test_stats = pd.DataFrame()
+for i, id in enumerate(df.index.get_level_values('id').unique()):
+    test = covid_eval.CovidAnalytics(id, df.loc[id], df.loc[id].columns)
+    test.analyze_test()
+    tmp = test.results
+    tmp = tmp.set_index('id')
+    test_stats.append(tmp)
+    if i == 0:
+        test_stats['result'] = df_f.loc[id, 'result_value']
+    else:
+        test_stats.loc[id, 'result'] = df_f.loc[id, 'result_value']
+
+
+bum = test.results
+bum = bum.set_index(['gen', 'id'], drop=True)
+kvak = bum.unstack(level='gen')
+kvak.columns = kvak.columns.swaplevel()
+kvak.sort_index(axis=1)
 
 import matplotlib.pyplot as plt
 plt.plot(test.xdata, test.pred, label='Fitted')

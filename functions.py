@@ -4,13 +4,13 @@ import pandas as pd
 from sklearn.metrics import r2_score
 import numpy as np
 
-
 class CovidAnalytics:
 
     def __init__(self, name, data):
         self.name = name
         self.xdata = np.array(range(1, 51))
         self.ydata = data
+        self.warning = False
         self.results = pd.DataFrame(columns=['id','Slope','x_intersec','r2','L','x0','k','b','Warning'])
 
     def sigmoid(self, x, L, x0, k, b):
@@ -38,13 +38,22 @@ class CovidAnalytics:
         return x
 
     def analyze_test(self):
-        self.fit_sigmoid()
-        self.r2()
-        self.slope = self.sigmoid_tangent_slope(self.popt[1],*self.popt[0:3])
-        self.x_intersec = self.x_axis_intersection(self.slope,self.popt[1],*self.popt)
-        self.results = self.results.append({'id': self.name,'Slope': self.slope,
-                                            'x_intersec': self.x_intersec,
-                                            'r2': self.r2_score, 'L': self.popt[0],
-                                            'x0': self.popt[1], 'k': self.popt[2],
-                                            'b': self.popt[3], 'Warning': 0},
-                                            ignore_index=True)
+        try:
+            self.fit_sigmoid()
+            self.r2()
+            self.slope = self.sigmoid_tangent_slope(self.popt[1],*self.popt[0:3])
+            self.x_intersec = self.x_axis_intersection(self.slope,self.popt[1],*self.popt)
+            self.results = self.results.append({'id': self.name,'Slope': self.slope,
+                                                'x_intersec': self.x_intersec,
+                                                'r2': self.r2_score, 'L': self.popt[0],
+                                                'x0': self.popt[1], 'k': self.popt[2],
+                                                'b': self.popt[3], 'Warning': self.warning},
+                                                ignore_index=True)
+        except (RuntimeError, ValueError):
+            self.warning = True
+            self.results = self.results.append({'id': self.name, 'Slope': np.nan,
+                                                'x_intersec': np.nan,
+                                                'r2': np.nan, 'L': np.nan,
+                                                'x0': np.nan, 'k': np.nan,
+                                                'b': np.nan, 'Warning': self.warning},
+                                               ignore_index=True)

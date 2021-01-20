@@ -1,11 +1,9 @@
 # import libs
-import os
-import matplotlib
 import importlib
+import matplotlib.pyplot as plt
 
-import numpy as np
 import pandas as pd
-
+import numpy as np
 
 
 
@@ -19,6 +17,9 @@ data.set_index(['id'], drop=True, inplace=True)
 
 # clean results with NaNs and inconclusive test
 #results.result_value.unique()
+condition = (data.DeltaRn.map(type) != int) & (data.DeltaRn.map(type) != float)
+data.loc[condition,'DeltaRn'] = np.nan
+data.DeltaRn.interpolate(method='linear', axis=0, inplace=True)
 res = results[results['result_value'].notna()]
 res = res[~(res['result_value'] == 'INVALID')]
 res = res.loc[~res.duplicated()]
@@ -48,34 +49,34 @@ id = df.index.get_level_values(0).unique()[0]
 df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
 df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
 test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
-df.loc[id, :].plot(title=f'{test_result} od id: {id}')
+#df.loc[id, :].plot(title=f'{test_result} od id: {id}')
 df.loc[id,:].index.get_level_values(0)
 
 df.loc[id]
 
 
 import functions as covid_eval
-importlib.reload(covid_eval)
+#importlib.reload(covid_eval)
 test_stats = pd.DataFrame()
 for i, id in enumerate(df.index.get_level_values('id').unique()):
     test = covid_eval.CovidAnalytics(id, df.loc[id], df.loc[id].columns)
     test.analyze_test()
     tmp = test.results
     tmp = tmp.set_index('id')
-    test_stats.append(tmp)
+    test_stats = test_stats.append(tmp)
     if i == 0:
-        test_stats['result'] = df_f.loc[id, 'result_value']
+        test_stats['result'] = df_f.loc[id, 'result_value'][0]
     else:
-        test_stats.loc[id, 'result'] = df_f.loc[id, 'result_value']
+        test_stats.loc[id, 'result'] = df_f.loc[id, 'result_value'][0]
 
 
-bum = test.results
-bum = bum.set_index(['gen', 'id'], drop=True)
+bum = test_stats
+bum = bum.reset_index().set_index(['gen', 'id'], drop=True)
 kvak = bum.unstack(level='gen')
 kvak.columns = kvak.columns.swaplevel()
-kvak.sort_index(axis=1)
+kvak.sort_index(axis=1,inplace=True)
 
-import matplotlib.pyplot as plt
+
 plt.plot(test.xdata, test.pred, label='Fitted')
 plt.plot(test.xdata, test.ydata, label='Actual')
 plt.xlabel('x')

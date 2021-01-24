@@ -8,7 +8,7 @@ class CovidAnalytics:
 
     def __init__(self, name, data, gens):
         self.name = name
-        self.xdata = np.array(range(1, 51))
+        self.xdata = np.array(range(1, len(data)+1))
         self.ydata = data
         self.gens = [gen for gen in gens]
         self.results = pd.DataFrame(columns=['id','Slope','x_intersec','r2','L','x0','k','b','Warning', 'gen'])

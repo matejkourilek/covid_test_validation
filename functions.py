@@ -20,10 +20,11 @@ class CovidAnalytics:
         return (y)
 
     def fit_sigmoid(self, gen):
+
         # this is an mandatory initial guess
         p0 = [max(self.ydata[gen]), np.median(self.xdata), 1, min(self.ydata[gen])]
-
-        popt, pcov = curve_fit(self.sigmoid, self.xdata, self.ydata[gen], p0, method='dogbox')
+        popt1, pcov1 = curve_fit(self.sigmoid, self.xdata, self.ydata[gen], p0, method='lm')
+        popt, pcov = curve_fit(self.sigmoid, self.xdata, self.ydata[gen], popt1, method='dogbox')
         self.pred[gen] = self.sigmoid(self.xdata, *popt)
         return popt, pcov
 

@@ -5,62 +5,40 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-
-
 # load data
 data = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Data')
 results = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Výsledky')
-data['id'] = data['TestBatchCode'] + '_' + data['SamplingItemCode']
-results['id'] = results['testbatchcode'] + '_' + results['samplingitemcode'] # add test position to Id
+data['id'] = data['TestBatchCode'] + '_' + data['TestResultPosition'] # + '_' + data['SamplingItemCode']
+results['id'] = results['testbatchcode'] + '_' + results['sampleposition'] # + '_' + results['samplingitemcode']
 results.set_index(['id'], drop=True, inplace=True)
 data.set_index(['id'], drop=True, inplace=True)
 
-# clean results with NaNs and inconclusive test
-#results.result_value.unique()
+# clean data - replace nonsense with nans
 condition = (data.DeltaRn.map(type) != int) & (data.DeltaRn.map(type) != float)
-data.loc[condition,'DeltaRn'] = np.nan
-data.DeltaRn.interpolate(method='linear', axis=0, inplace=True)
-res = results[results['result_value'].notna()]
-res = res[~(res['result_value'] == 'INVALID')]
-res = res.loc[~res.duplicated()]
-res.shape
+data.loc[condition, 'DeltaRn'] = np.nan
+# clean results of NaNs and inconclusive test
+res = results.loc[results['result_value'].notna(), :]
+res = res.loc[~(res['result_value'] == 'INVALID'), :]
+res = res.loc[~res.duplicated(), :]
+
 res.samplestate.unique()
 res.drop(['samplestate', 'sampleposition'], axis=1, inplace=True)
+
+# merge results with data and get rid of duplicities
 df1 = data.drop(['Rn'], axis=1)
-df1 = df1.loc[(df1['SamplingItemCode'] != 'unknown') & (df1['SamplingItemCode'] != 'unknown2')]
-
-# get rid of duplicities
 df_f = res.merge(df1, how='inner', left_index=True, right_index=True)
-df_f.shape
-df_f.head()
-#df_f.dropna(subset=['TestResultPosition', 'SamplingItemCode'], axis=0, inplace=True)
-#df_f['id'] = df_f['TestBatchCode'] + '_' + df_f['SamplingItemCode']# + '_' + df_f['TestResultPosition']
-df_f.drop(['samplingitemcode', 'testbatchcode', 'TestBatchCode', 'SamplingItemCode', 'TestResultPosition'], axis=1, inplace=True)
 df_f = df_f.reset_index(drop=False).set_index(['id', 'Gen', 'Cycle'], drop=True)
-#df_f = df_f.drop(columns=['TestBatchCode', 'TestResultPosition', 'SamplingItemCode', 'Rn'])
-
-df_f = df_f[~df_f.index.duplicated(keep='first')]
+df_f = df_f.loc[~df_f.index.duplicated(keep='first'), :]
 df = df_f.unstack(level='Gen')
 df = df['DeltaRn']
-df = df.fillna(method='ffill')
-
-# MS2 not fit => smthg is wrong
-id = df.index.get_level_values(0).unique()[200]
-df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
-df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
-test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
-df.loc[id, :].plot(title=f'{test_result} od id: {id}')
-df.loc[id,:].index.get_level_values(0)
-
-df.loc[id]
-
+df = df.astype(float)
 
 import functions as covid_eval
 importlib.reload(covid_eval)
 test_stats = pd.DataFrame()
 for i, id in enumerate(df.index.get_level_values('id').unique()):
-
-    test = covid_eval.CovidAnalytics(id, df.loc[id], df.loc[id].columns)
+    df_tmp = df.loc[id].interpolate(method='linear', axis=0)
+    test = covid_eval.CovidAnalytics(id, df_tmp, df.loc[id].columns)
     test.analyze_test()
     tmp = test.results
     tmp = tmp.set_index('id')
@@ -83,7 +61,7 @@ for i, id in enumerate(df.index.get_level_values('id').unique()):
 
 
 test_stats = test_stats.reset_index().set_index(['gen', 'id'], drop=True)
-#test_stats = test_stats.drop(index='S gene', level=0)
+
 final = test_stats.unstack(level='gen')
 final.columns = final.columns.swaplevel()
 final.sort_index(axis=1,inplace=True)
@@ -107,5 +85,3 @@ np.sum((test_statsW.result == 'P') | (test_statsW.result == 'REV-P'))
 id_batch = test_statsW.loc[test_statsW.result=='P'].index.get_level_values(1)[0]
 id_gen = test_statsW.loc[test_statsW.result=='P'].index.get_level_values(0)[0]
 '''
-
-# 3 levels of id insert to results table as column

@@ -23,6 +23,7 @@ class CovidAnalytics:
 
         # this is an mandatory initial guess
         p0 = [max(self.ydata[gen]), np.median(self.xdata), 1, min(self.ydata[gen])]
+        # make another guess by lm
         popt1, pcov1 = curve_fit(self.sigmoid, self.xdata, self.ydata[gen], p0, method='lm')
         popt, pcov = curve_fit(self.sigmoid, self.xdata, self.ydata[gen], popt1, method='dogbox')
         self.pred[gen] = self.sigmoid(self.xdata, *popt)
@@ -41,7 +42,10 @@ class CovidAnalytics:
         c = y0 - slope * x0
         x = -c / slope
         return x
-
+    def compare_plot(self):
+        self.pred.columns = 'fit ' + test.pred.columns.values
+        self. graph = pd.concat([test.pred, test.ydata], axis=1).plot(title=f'{test_result1} od id: {test.name}')
+        self. graph.xlabel('Cycle')
     def analyze_test(self):
         for gen in self.gens:
             try:

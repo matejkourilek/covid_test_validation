@@ -11,7 +11,7 @@ import numpy as np
 data = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Data')
 results = pd.read_excel('data/00-ResultsFull_JK.xlsx', sheet_name='Výsledky')
 data['id'] = data['TestBatchCode'] + '_' + data['SamplingItemCode']
-results['id'] = results['testbatchcode'] + '_' + results['samplingitemcode']
+results['id'] = results['testbatchcode'] + '_' + results['samplingitemcode'] # add test position to Id
 results.set_index(['id'], drop=True, inplace=True)
 data.set_index(['id'], drop=True, inplace=True)
 
@@ -44,21 +44,22 @@ df = df_f.unstack(level='Gen')
 df = df['DeltaRn']
 df = df.fillna(method='ffill')
 
-
-id = df.index.get_level_values(0).unique()[0]
+# MS2 not fit => smthg is wrong
+id = df.index.get_level_values(0).unique()[200]
 df_f.loc[df_f.index.get_level_values(0)==id,'resultlevel'].unique()
 df_f.loc[df_f.index.get_level_values(0)==id,'result_value'][1]
 test_result = df_f.loc[df_f.index.get_level_values(0) == id, 'result_value'][1]
-#df.loc[id, :].plot(title=f'{test_result} od id: {id}')
+df.loc[id, :].plot(title=f'{test_result} od id: {id}')
 df.loc[id,:].index.get_level_values(0)
 
 df.loc[id]
 
 
 import functions as covid_eval
-#importlib.reload(covid_eval)
+importlib.reload(covid_eval)
 test_stats = pd.DataFrame()
 for i, id in enumerate(df.index.get_level_values('id').unique()):
+
     test = covid_eval.CovidAnalytics(id, df.loc[id], df.loc[id].columns)
     test.analyze_test()
     tmp = test.results
@@ -69,18 +70,42 @@ for i, id in enumerate(df.index.get_level_values('id').unique()):
     else:
         test_stats.loc[id, 'result'] = df_f.loc[id, 'result_value'][0]
 
+    test.pred.columns = 'fit ' + test.pred.columns.values
+    aa = pd.concat([test.pred, test.ydata], axis=1)
+    test_result1 = df_f.loc[id, 'result_value'][0]
+    plt.plot(aa)
+    plt.xlabel('Cycle')
+    plt.legend(aa.columns.values)
+    plt.title(f'{test_result1} od id: {test.name}')
+    plt.savefig('graphs/'+ id + '.pdf')
+    plt.show()
+    plt.close()
 
-bum = test_stats
-bum = bum.reset_index().set_index(['gen', 'id'], drop=True)
-kvak = bum.unstack(level='gen')
-kvak.columns = kvak.columns.swaplevel()
-kvak.sort_index(axis=1,inplace=True)
+
+test_stats = test_stats.reset_index().set_index(['gen', 'id'], drop=True)
+#test_stats = test_stats.drop(index='S gene', level=0)
+final = test_stats.unstack(level='gen')
+final.columns = final.columns.swaplevel()
+final.sort_index(axis=1,inplace=True)
+
+neg = final.iloc[:, final.columns.get_level_values(1)=='Slope'].le(0).sum(axis=1) > 1
+negative = final.loc[neg,final.columns.get_level_values(1)=='result']
+id_batches = negative.loc[negative.iloc[:,1]!='N',].index.get_level_values(0).values
 
 
-plt.plot(test.xdata, test.pred, label='Fitted')
-plt.plot(test.xdata, test.ydata, label='Actual')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.legend()
+id_batch = id_batches[1]
+test_result1 = df_f.loc[df_f.index.get_level_values(0) == id_batch, 'result_value'][1]
+df.loc[id_batch, :].plot(title=f'{test_result1} od id: {id_batch}')
 
-plt.show()
+test = covid_eval.CovidAnalytics(id_batch, df.loc[id_batch], df.loc[id_batch].columns)
+test.analyze_test()
+unc_p = np.sum((test_stats.Warning) & ((test_stats.result == 'N') | (test_stats.result == 'REV-N')))/np.sum(test_stats.Warning)
+
+'''
+test_statsW = test_stats.loc[test_stats.Warning]
+np.sum((test_statsW.result == 'P') | (test_statsW.result == 'REV-P'))
+id_batch = test_statsW.loc[test_statsW.result=='P'].index.get_level_values(1)[0]
+id_gen = test_statsW.loc[test_statsW.result=='P'].index.get_level_values(0)[0]
+'''
+
+# 3 levels of id insert to results table as column

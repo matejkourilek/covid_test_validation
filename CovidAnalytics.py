@@ -11,7 +11,8 @@ class CovidAnalytics:
         self.xdata = np.array(range(1, len(data)+1))
         self.ydata = data
         self.gens = [gen for gen in gens]
-        self.results = pd.DataFrame(columns=['id','Slope','x_intersec','r2','L','x0','k','b','Warning', 'gen'])
+        self.results = pd.DataFrame(columns=['id', 'Slope', 'x_intersec', 'r2', 'L', 'x0', 'k', 'b',
+                                             'min', 'max', 'Warning', 'gen'])
         self.pred = pd.DataFrame(index=self.xdata, columns=self.gens)
         self.warning = False
 
@@ -42,13 +43,12 @@ class CovidAnalytics:
         c = y0 - slope * x0
         x = -c / slope
         return x
-    def compare_plot(self):
-        self.pred.columns = 'fit ' + test.pred.columns.values
-        self. graph = pd.concat([test.pred, test.ydata], axis=1).plot(title=f'{test_result1} od id: {test.name}')
-        self. graph.xlabel('Cycle')
+
     def analyze_test(self):
         for gen in self.gens:
             try:
+                minv = self.ydata[gen].min()
+                maxv = self.ydata[gen].max()
                 f_param, cov = self.fit_sigmoid(gen)
                 r2 = self.r2(gen)
                 slope = self.sigmoid_tangent_slope(f_param[1], *f_param[0:3])
@@ -57,7 +57,8 @@ class CovidAnalytics:
                                                     'x_intersec': x_intersec,
                                                     'r2': r2, 'L': f_param[0],
                                                     'x0': f_param[1], 'k': f_param[2],
-                                                    'b': f_param[3], 'Warning': self.warning,
+                                                    'b': f_param[3], 'min': minv,
+                                                    'max': maxv, 'Warning': self.warning,
                                                     'gen': gen},
                                                     ignore_index=True)
             except (RuntimeError, ValueError):
@@ -66,6 +67,7 @@ class CovidAnalytics:
                                                     'x_intersec': np.nan,
                                                     'r2': np.nan, 'L': np.nan,
                                                     'x0': np.nan, 'k': np.nan,
-                                                    'b': np.nan, 'Warning': warning,
+                                                    'b': np.nan, 'min': minv,
+                                                    'max': maxv, 'Warning': warning,
                                                     'gen': gen},
                                                    ignore_index=True)
